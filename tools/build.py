@@ -109,6 +109,8 @@ class Page:
         self.lang, self.t, self.p = lang, UI[lang], PATHS[lang]
 
     def href(self, depth, target):
+        if target == "index.html":
+            return "../" * depth or "./"
         return "../" * depth + target
 
     def genre_url(self, depth, gid):
@@ -122,6 +124,7 @@ class Page:
         pt_url, en_url = (canonical, other_url) if lang == "pt" else (other_url, canonical)
         assets = "../" * (depth + (1 if lang == "pt" else 0))
         other_href = ("../" * depth + "pt/" + other) if lang == "en" else ("../" * (depth + 1) + other)
+        other_href = other_href.replace("index.html", "")
         nav = "".join(f'<a href="{self.href(depth, p[k])}"{" aria-current=page" if cur == k else ""}>{e(t["nav"][k])}</a>' for k in ["home", "genres", "evo", "lab", "songs", "bands", "about"])
         og = f"{SITE}/og-image{'-en' if lang == 'en' else ''}.png"
         ld = json.dumps({"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": canonical, "inLanguage": t["locale"].replace("_", "-"),
@@ -298,7 +301,7 @@ def page_genre(pg, g, i):
 <div><h3>{e(t['parents'])}</h3>{clink(pg, 1, g['parents'])}{ext_block}</div>
 <div><h3>{e(t['children'])}</h3>{clink(pg, 1, g['children'])}</div>
 <div><h3>{e(t['similar'])}</h3>{clink(pg, 1, g['similar'])}</div>
-</div><a class="btn" href="../{pg.p['home']}#{g['id']}">{e(t['seeTree'])} →</a> <a class="btn" href="../{pg.p['lab']}">{e(t['compareBtn'])} →</a></section>
+</div><a class="btn" href="../#{g['id']}">{e(t['seeTree'])} →</a> <a class="btn" href="../{pg.p['lab']}">{e(t['compareBtn'])} →</a></section>
 <section class="sec"><h2>{e(t['greatsH'].format(n=n))}</h2><ol class="greats">{greats}</ol></section>
 {songs}{pager}</div>"""
     pg.write(f"{pg.p['dir']}/{g['id']}.html", f"{other_dir}/{g['id']}.html", 1, n, t["genreDesc"].format(n=n, y=g["year"]), body, "genres")
