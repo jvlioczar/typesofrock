@@ -117,7 +117,7 @@ class Page:
     def genre_url(self, depth, gid):
         return self.href(depth, f"{self.p['dir']}/{gid}.html")
 
-    def write(self, rel, other, depth, title, desc, body, cur="", og_alt=None):
+    def write(self, rel, other, depth, title, desc, body, cur="", og_img=None, og_alt=None, kind="WebPage", crumbs=None):
         lang, t, p = self.lang, self.t, self.p
         prefix = "" if lang == "en" else "pt/"
         canonical = f"{SITE}/{prefix}{rel}".replace("index.html", "")
@@ -127,9 +127,15 @@ class Page:
         other_href = ("../" * depth + "pt/" + other) if lang == "en" else ("../" * (depth + 1) + other)
         other_href = other_href.replace("index.html", "")
         nav = "".join(f'<a href="{self.href(depth, p[k])}"{" aria-current=page" if cur == k else ""}>{e(t["nav"][k])}</a>' for k in ["home", "genres", "evo", "lab", "songs", "bands", "about"])
-        og = f"{SITE}/og-image{'-en' if lang == 'en' else ''}.png"
-        ld = json.dumps({"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": canonical, "inLanguage": t["locale"].replace("_", "-"),
-                         "isPartOf": {"@type": "WebSite", "name": t["site"], "url": SITE + "/"}, "author": {"@type": "Person", "name": "Julio Cesar Prava"}}, ensure_ascii=False)
+        og = f"{SITE}/{og_img}" if og_img else f"{SITE}/og-image{'-en' if lang == 'en' else ''}.png"
+        alt = og_alt or t["ogAlt"]
+        home_url = SITE + "/" + prefix
+        graph = [{"@type": kind, "@id": canonical + "#page", "name": title, "headline": title, "description": desc, "url": canonical, "image": og, "inLanguage": t["html"],
+                  "dateModified": BUILT, "isPartOf": {"@id": home_url + "#website"}, "author": {"@type": "Person", "name": "Julio Cesar Prava"}, "publisher": {"@type": "Organization", "name": "BiblioVerse", "url": "https://biblioverse.org"}},
+                 {"@type": "WebSite", "@id": home_url + "#website", "name": t["site"], "url": home_url, "inLanguage": t["html"], "description": t["homeDesc"].format(n=len(GENRES))}]
+        if crumbs:
+            graph.append({"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "item": u} for i, (n, u) in enumerate(crumbs)]})
+        ld = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False)
         full_title = title if title.startswith(t["site"]) else f"{title} · {t['site']}"
         doc = f"""<!doctype html>
 <html lang="{t['html']}">
@@ -144,18 +150,24 @@ class Page:
 <link rel="alternate" hreflang="pt-BR" href="{pt_url}">
 <link rel="alternate" hreflang="en" href="{en_url}">
 <link rel="alternate" hreflang="x-default" href="{en_url}">
-<meta property="og:type" content="website">
+<meta property="og:type" content="{'article' if kind == 'Article' else 'website'}">
 <meta property="og:site_name" content="{e(t['site'])}">
 <meta property="og:locale" content="{t['locale']}">
+<meta property="og:locale:alternate" content="{'en_US' if lang == 'pt' else 'pt_BR'}">
 <meta property="og:url" content="{canonical}">
 <meta property="og:title" content="{e(full_title)}">
 <meta property="og:description" content="{e(desc)}">
 <meta property="og:image" content="{og}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="{e(alt)}">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{e(full_title)}">
+<meta name="twitter:description" content="{e(desc)}">
 <meta name="twitter:image" content="{og}">
-<meta name="theme-color" content="#f6f0e4">
+<meta name="twitter:image:alt" content="{e(alt)}">
+<meta name="theme-color" content="#17161a">
 <link rel="icon" href="{assets}favicon.svg" type="image/svg+xml">
 <link rel="icon" href="{assets}favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="{assets}apple-touch-icon.png">
@@ -192,6 +204,7 @@ class Page:
 
 
 URLS = []
+BUILT = "2026-10-31"
 TOTAL_ARTISTS = len(ARTIST)
 TOTAL_SONGS = sum(len(v) for v in LISTS["decades"].values())
 
@@ -250,7 +263,7 @@ def page_genres(pg):
 <div class="filters"><input id="q" type="search" placeholder="{e(t['genreSearch'])}" aria-label="{e(t['genreSearch'])}"><select id="sort" aria-label="{e(t['sortBy'])}"><option value="year">{e(t['sortYear'])}</option><option value="name">{e(t['sortName'])}</option><option value="kids">{e(t['sortKids'])}</option></select><span class="mono"><span id="qcount"></span> {e(t['spp'])}</span></div>
 <div class="cards" id="cards">{cards}</div><div style="height:60px"></div></div>"""
     other = PATHS["en" if L == "pt" else "pt"]["genres"]
-    pg.write(pg.p["genres"], other, 0, t["genresH"], t["genresDesc"].format(n=len(GENRES)), body, "genres")
+    pg.write(pg.p["genres"], other, 0, t["genresH"], t["genresDesc"].format(n=len(GENRES)), body, "genres", kind="CollectionPage")
 
 
 def song_rows(g):
@@ -305,7 +318,13 @@ def page_genre(pg, g, i):
 </div><a class="btn" href="../#{g['id']}">{e(t['seeTree'])} →</a> <a class="btn" href="../{pg.p['lab']}">{e(t['compareBtn'])} →</a></section>
 <section class="sec"><h2>{e(t['greatsH'].format(n=n))}</h2><ol class="greats">{greats}</ol></section>
 {songs}{pager}</div>"""
-    pg.write(f"{pg.p['dir']}/{g['id']}.html", f"{other_dir}/{g['id']}.html", 1, n, t["genreDesc"].format(n=n, y=g["year"]), body, "genres")
+    base = SITE + ("/pt/" if L == "pt" else "/")
+    desc = t["genreDesc"].format(n=n, y=g["year"], a=", ".join(g["artists"][:3]))
+    if len(desc) > 165:
+        desc = t["genreDesc"].format(n=n, y=g["year"], a=", ".join(g["artists"][:2]))
+    pg.write(f"{pg.p['dir']}/{g['id']}.html", f"{other_dir}/{g['id']}.html", 1, t["genreTitle"].format(n=n), desc, body, "genres",
+             og_img=f"og/{L}/{g['id']}.png", og_alt=t["ogGenreAlt"].format(n=n), kind="Article",
+             crumbs=[(t["site"], base), (t["nav"]["genres"], base + pg.p["genres"]), (n, f"{base}{pg.p['dir']}/{g['id']}.html")])
 
 
 def page_evo(pg):
@@ -356,7 +375,7 @@ def page_songs(pg):
 <div class="tabs" id="decTabs">{tabs}</div>
 <div class="filters"><input id="songq" type="search" placeholder="{e(t['songSearch'])}" aria-label="{e(t['songSearch'])}"><button class="btn pri" id="jukebox" type="button">{e(t['jukebox'])}</button><span class="mono"><span id="songcount"></span> {e(t['songsN'])}</span></div>
 <div id="decades">{secs}</div></div>"""
-    pg.write(pg.p["songs"], PATHS["en" if L == "pt" else "pt"]["songs"], 0, t["songsH"], t["songsDesc"].format(n=TOTAL_SONGS), body, "songs")
+    pg.write(pg.p["songs"], PATHS["en" if L == "pt" else "pt"]["songs"], 0, t["songsH"], t["songsDesc"].format(n=TOTAL_SONGS), body, "songs", kind="CollectionPage")
 
 
 def page_bands(pg):
@@ -388,7 +407,7 @@ def page_bands(pg):
 <div class="filters"><input id="bandq" type="search" placeholder="{e(t['bandSearch'])}" aria-label="{e(t['bandSearch'])}"><span class="mono"><span id="bandcount"></span> {e(t['bandsN'])}</span></div>
 <p class="mono" style="margin-bottom:10px">{e(t['sortHint'])}</p>
 <div class="tbl-wrap"><table class="bands"><thead><tr>{th('t', 'Tier')}{th('name', t['band'])}{th('imp', t['imp'], 'n')}{th('pop', t['pop'], 'n')}{th('avg', t['avg'], 'n')}<th>{e(t['nav']['genres'])}</th></tr></thead><tbody id="bandsBody">{rows}</tbody></table></div><div style="height:60px"></div></div>"""
-    pg.write(pg.p["bands"], PATHS["en" if L == "pt" else "pt"]["bands"], 0, t["bandsH"], t["bandsDesc"].format(n=count), body, "bands")
+    pg.write(pg.p["bands"], PATHS["en" if L == "pt" else "pt"]["bands"], 0, t["bandsH"], t["bandsDesc"].format(n=count), body, "bands", kind="CollectionPage")
 
 
 def page_about(pg):
@@ -399,7 +418,7 @@ def page_about(pg):
     secs += "".join(f"<h3>{e(h)}</h3><p>{e(p)}</p>" for h, p in pv["items"])
     secs += f'<p>{e(pv["contact"])} <a href="{PRIVACY["link"]}" target="_blank" rel="noopener">LinkedIn</a>.</p><p class="mono">{e(pv["updated"])}</p></section>'
     body = f"""<div class="wrap"><div class="page-head"><h1>{e(t['aboutH'])}</h1></div><div class="prose" style="padding-bottom:60px">{secs}</div></div>"""
-    pg.write(pg.p["about"], PATHS["en" if L == "pt" else "pt"]["about"], 0, t["aboutH"], t["aboutDesc"], body, "about")
+    pg.write(pg.p["about"], PATHS["en" if L == "pt" else "pt"]["about"], 0, t["aboutH"], t["aboutDesc"], body, "about", kind="AboutPage")
 
 
 def data_js(lang):
@@ -434,7 +453,7 @@ def main():
     open(os.path.join(ROOT, "404.html"), "w", encoding="utf8", newline="\n").write(notfound)
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
     for u, pt, en in URLS:
-        sm.append(f'<url><loc>{u}</loc><xhtml:link rel="alternate" hreflang="pt-BR" href="{pt}"/><xhtml:link rel="alternate" hreflang="en" href="{en}"/></url>')
+        sm.append(f'<url><loc>{u}</loc><lastmod>{BUILT}</lastmod><xhtml:link rel="alternate" hreflang="pt-BR" href="{pt}"/><xhtml:link rel="alternate" hreflang="en" href="{en}"/></url>')
     sm.append("</urlset>")
     open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf8", newline="\n").write("\n".join(sm))
     open(os.path.join(ROOT, "robots.txt"), "w", newline="\n").write(f"User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n")

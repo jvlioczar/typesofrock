@@ -2,6 +2,7 @@
 import os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 bad = 0
+SEEN = set()
 PT = re.compile(r"\b(Gêneros|Músicas|Bandas|Sobre|Contexto|Sonoridade|Laboratório|Filhos|Pais)\b")
 for d, _, fs in os.walk(ROOT):
     if "tools" in d or ".git" in d:
@@ -11,6 +12,20 @@ for d, _, fs in os.walk(ROOT):
             continue
         p = os.path.join(d, f)
         s = open(p, encoding="utf8").read()
+        if f != "404.html":
+            for tag, rx in [("title", r"<title>(.*?)</title>"), ("description", r'<meta name="description" content="([^"]*)"')]:
+                m = re.search(rx, s)
+                v = m.group(1) if m else ""
+                if not v or (tag, v) in SEEN:
+                    print("SEO", tag, "vazio ou repetido", os.path.relpath(p, ROOT)); bad += 1
+                SEEN.add((tag, v))
+                if len(v) > 175 and tag == "description":
+                    print("SEO longa", len(v), os.path.relpath(p, ROOT))
+            if s.count("<h1") != 1:
+                print("SEO h1", os.path.relpath(p, ROOT)); bad += 1
+            m = re.search(r'property="og:image" content="https://typesofrock\.biblioverse\.org/([^"]+)"', s)
+            if not m or not os.path.exists(os.path.join(ROOT, m.group(1))):
+                print("SEO imagem", os.path.relpath(p, ROOT)); bad += 1
         if "assuper" + "listas" in s.lower():
             print("CITA FONTE", p); bad += 1
         for h in re.findall(r'(?:href|src)="([^"#]+)', s):
