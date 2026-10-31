@@ -184,7 +184,8 @@ class Page:
 <a class="skip" href="#main">{e(t['skip'])}</a>
 <header class="top"><div class="wrap">
 <a class="logo" href="{self.href(depth, p['home'])}">{LOGO}{e(t['site'])}</a>
-<nav class="nav" aria-label="{e(t['menu'])}">{nav}<a class="lang" href="{other_href}" hreflang="{'en' if lang == 'pt' else 'pt-BR'}" lang="{'en' if lang == 'pt' else 'pt-BR'}">{t['switch']}</a></nav>
+<button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="siteNav" aria-label="{e(t['menu'])}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+<nav class="nav" id="siteNav" aria-label="{e(t['menu'])}">{nav}<a class="lang" href="{other_href}" hreflang="{'en' if lang == 'pt' else 'pt-BR'}" lang="{'en' if lang == 'pt' else 'pt-BR'}">{t['switch']}</a></nav>
 </div></header>
 <main id="main">
 {body}

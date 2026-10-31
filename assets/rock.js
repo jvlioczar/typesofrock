@@ -175,7 +175,7 @@
         edgeEls.push({ el: e, from: pid, to: g.id });
       });
       var hub = g.children.length >= 3 || g.clade === 'raizes';
-      var node = el('g', { 'class': 'node' + (hub ? ' hub' : ''), tabindex: 0, role: 'button', 'aria-label': g.name + ', ' + g.year, transform: 'translate(' + g.x.toFixed(1) + ' ' + g.y.toFixed(1) + ')' }, nodes);
+      var node = el('g', { 'class': 'node' + (hub ? ' hub' : '') + (g.children.length >= 4 || g.clade === 'raizes' ? ' major' : ''), tabindex: 0, role: 'button', 'aria-label': g.name + ', ' + g.year, transform: 'translate(' + g.x.toFixed(1) + ' ' + g.y.toFixed(1) + ')' }, nodes);
       el('circle', { 'class': 'hit', r: 12 }, node);
       el('circle', { 'class': 'dot', r: Math.min(5 + g.children.length * 0.8, 11), fill: color(g) }, node);
       var deg = g.a * 180 / Math.PI, flip = Math.cos(g.a) < 0, off = Math.min(5 + g.children.length * 0.8, 11) + 5;
@@ -261,15 +261,15 @@
     var view = { x: 0, y: 0, k: 1 }, pts = {}, moved = false, last0 = null, dist0 = 0;
     function fit() {
       var b = svg.getBoundingClientRect(), small = b.width < 720;
-      var w = b.width, h = b.height, s = Math.min(w, h) / (VB * 2);
-      if (small) s = Math.max(s, w / (VB * 2) * 1.5);
-      return { w: w, h: h, s: s };
+      var w = b.width, h = b.height, s = Math.min(w, h) / (VB * (small ? 2.5 : 2));
+            return { w: w, h: h, s: s };
     }
     function centerShift(w) { return w < 1000 ? 0 : panel.classList.contains('open') ? -170 : 70; }
     function apply() {
       var f = fit(), s = f.s * view.k;
       svg.setAttribute('viewBox', '0 0 ' + f.w + ' ' + f.h);
       svg.style.setProperty('--lab', (Math.max(11, Math.min(14, 11 + (s - .5) * 6)) / s).toFixed(2) + 'px');
+      svg.classList.toggle('sparse', s < .42);
       svg.style.setProperty('--sw', (1 / s).toFixed(3));
       var cx = f.w / 2 + centerShift(f.w) + view.x, cy = f.h / 2 + view.y;
       world.setAttribute('transform', 'translate(' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ') scale(' + s.toFixed(4) + ')');
@@ -467,10 +467,10 @@
 
   /* ---------- Anúncio: aparece uma vez, no primeiro acesso ---------- */
   function initPromo() {
-    var box = $('#promo'), KEY = 'tr-promo-visto'; if (!box) return;
-    try { if (localStorage.getItem(KEY)) return; localStorage.setItem(KEY, '1'); } catch (e) { return; }
+    var box = $('#promo'), KEY = 'tr-promo-v2'; if (!box) return;
+    try { if (localStorage.getItem(KEY)) return; } catch (e) {}
     function place() { // fica acima do relógio da árvore e da legenda, quando estão na tela
-      var gap = 12, b = gap, keep = $$('.clock, .legend').filter(function (x) { return innerWidth < 720 || x.className === 'clock'; });
+      var gap = 12, b = gap, keep = $$('.clock, .legend').filter(function (x) { return innerWidth <= 960 || x.className === 'clock'; });
       keep.forEach(function (x) { var r = x.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) b = Math.max(b, innerHeight - r.top + gap); });
       box.style.bottom = b + 'px';
     }
@@ -478,8 +478,20 @@
     $('.promo-x', box).addEventListener('click', close);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !box.hidden && !$('#panel.open')) close(); });
     addEventListener('scroll', place, { passive: true }); addEventListener('resize', place);
-    setTimeout(function () { box.hidden = false; place(); }, 1200);
+    setTimeout(function () {
+      box.hidden = false; place();
+      try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    }, 1200);
   }
 
-  initPromo(); initTree(); initIndex(); initSongs(); initBands(); initLab();
+  /* ---------- Menu no celular ---------- */
+  function initMenu() {
+    var btn = $('#menuBtn'), nav = $('#siteNav'); if (!btn) return;
+    function set(open) { nav.classList.toggle('open', open); btn.setAttribute('aria-expanded', open); }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); set(!nav.classList.contains('open')); });
+    document.addEventListener('click', function (e) { if (!nav.contains(e.target)) set(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { set(false); } });
+  }
+
+  initMenu(); initPromo(); initTree(); initIndex(); initSongs(); initBands(); initLab();
 })();
