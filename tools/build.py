@@ -8,7 +8,7 @@ sys.path.insert(0, HERE)
 import genres_1, genres_2, genres_3, genres_4
 from genres_3 import EXT, CLADES
 from content import CONCEPTS, TIERS, DECADES, UI, PRIVACY
-from bands_extra import EXTRA
+from bands_extra import EXTRA, BRAZIL_PT
 
 SITE = "https://typesofrock.biblioverse.org"
 LISTS = json.load(open(os.path.join(HERE, "lists.json"), encoding="utf8"))
@@ -385,7 +385,7 @@ def page_bands(pg):
     seen = set(akey(FIX.get(n, n)) for k in "SABC" for n in LISTS["tiers"][k])
     extra = {k: [] for k in "SABC"}
     for k, names in EXTRA.items():
-        for n in names:
+        for n in names + (BRAZIL_PT.get(k, []) if L == "pt" else []):
             if akey(n) not in seen:
                 seen.add(akey(n))
                 extra[k].append(n)
