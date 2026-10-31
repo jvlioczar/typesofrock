@@ -35,62 +35,128 @@
     clean: [[0,0,1,0],[2,4,1,0],[4,7,1,0],[6,12,1,0],[8,5,1,0],[10,9,1,0],[12,7,1,0],[14,4,1,0]],
     ska:   [[2,0,1,1],[6,0,1,1],[10,5,1,1],[14,7,1,1]]
   };
-  function noiseBuf(ctx) {
-    var b = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate), d = b.getChannelData(0);
+  function noiseBuf(ctx, secs) {
+    var b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * secs), ctx.sampleRate), d = b.getChannelData(0);
     for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     return b;
   }
   function env(g, t, peak, dur) {
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.003);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   }
-  function kick(ctx, out, t) {
-    var o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.09);
-    env(g, t, 0.9, 0.17); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.2);
-  }
-  function hit(ctx, out, buf, t, type, f, peak, dur) {
-    var s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
-    s.buffer = buf; fl.type = type; fl.frequency.value = f; env(g, t, peak, dur);
-    s.connect(fl); fl.connect(g); g.connect(out); s.start(t); s.stop(t + dur + 0.02);
+  // Corda dedilhada (Karplus-Strong): um ruído curto circula num atraso filtrado e decai como uma corda real.
+  var plucks = {};
+  function pluck(ctx, f, muted) {
+    var sr = ctx.sampleRate, key = sr + '|' + f.toFixed(1) + '|' + (muted ? 1 : 0);
+    if (plucks[key]) return plucks[key];
+    if (Object.keys(plucks).length > 90) plucks = {};
+    var N = Math.max(2, Math.round(sr / f)), len = Math.floor(sr * (muted ? 0.32 : 1.5)), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0);
+    var pick = Math.max(1, Math.floor(N * 0.17)), last = 0, i;
+    for (i = 0; i < N && i < len; i++) { last = last * (muted ? 0.75 : 0.35) + (Math.random() * 2 - 1); d[i] = last * 0.5; }
+    for (i = N - 1; i >= pick; i--) d[i] -= d[i - pick]; // posição da palheta na corda
+    var loss = muted ? 0.972 : 0.9978;
+    for (i = N + 1; i < len; i++) d[i] = loss * 0.5 * (d[i - N] + d[i - N - 1]);
+    return (plucks[key] = { buffer: b, rate: f * (N + 0.5) / sr });
   }
   function curve(drive) {
-    var c = new Float32Array(1024), k = drive * drive * 2.2 + 1;
-    for (var i = 0; i < 1024; i++) { var x = i / 512 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); }
+    var c = new Float32Array(2048), k = drive * drive * 1.1 + 0.5, n = Math.tanh(k);
+    for (var i = 0; i < 2048; i++) { var x = i / 1024 - 1; c[i] = Math.tanh(k * (x + 0.04 * x * x)) / n; }
     return c;
   }
-  function scheduleBars(ctx, out, t0, sound, genome, bars) {
-    var bpm = sound[0], step = 60 / bpm / 4, kit = KITS[sound[1]] || KITS.rock, riff = RIFFS[sound[2]] || RIFFS.power;
+  function biquad(ctx, type, f, q, gain) {
+    var n = ctx.createBiquadFilter(); n.type = type; n.frequency.value = f;
+    if (q) n.Q.value = q;
+    if (gain) n.gain.value = gain;
+    return n;
+  }
+  function chainAll(list) { for (var i = 0; i + 1 < list.length; i++) list[i].connect(list[i + 1]); return list[list.length - 1]; }
+  // Um amplificador com caixa: corta graves antes da distorção, satura e depois molda como um falante de guitarra.
+  function ampChannel(ctx, drive, heavy, pan, room, dry) {
+    var input = ctx.createGain(), pre = ctx.createGain(), shaper = ctx.createWaveShaper(), out = ctx.createGain(), panner = ctx.createStereoPanner();
+    pre.gain.value = 0.7 + drive * 0.25;
+    shaper.curve = curve(drive); shaper.oversample = '4x';
+    out.gain.value = (0.34 + (10 - drive) * 0.035) * (drive <= 2 ? 1.7 : 1);
+    panner.pan.value = pan;
+    chainAll([input, biquad(ctx, 'highpass', drive > 5 ? 130 : 70, 0.7), pre, shaper,
+      biquad(ctx, 'highpass', 75, 0.7), biquad(ctx, 'peaking', 110, 1, 2 + heavy * 0.35),
+      biquad(ctx, 'peaking', 480, 1, -1 - drive * 0.45), biquad(ctx, 'peaking', 2500, 0.9, 1 + drive * 0.35),
+      biquad(ctx, 'lowpass', 3400 + drive * 200, 0.6), biquad(ctx, 'lowpass', 6500, 0.7), out, panner]);
+    panner.connect(dry); panner.connect(room);
+    return input;
+  }
+  function makeChain(ctx, dest, genome) {
     var drive = genome[0], heavy = genome[2];
+    var master = ctx.createGain(), comp = ctx.createDynamicsCompressor(), dry = ctx.createGain(), room = ctx.createGain(), conv = ctx.createConvolver();
+    master.gain.value = 0.5;
+    var limit = ctx.createDynamicsCompressor();
+    limit.threshold.value = -3; limit.knee.value = 2; limit.ratio.value = 20; limit.attack.value = 0.002; limit.release.value = 0.08;
+    comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = 0.006; comp.release.value = 0.16;
+    // Sala curta: ruído que decai, usado como resposta de impulso.
+    var irLen = Math.floor(ctx.sampleRate * 0.55), ir = ctx.createBuffer(2, irLen, ctx.sampleRate);
+    for (var c = 0; c < 2; c++) { var d = ir.getChannelData(c); for (var i = 0; i < irLen; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3.2); }
+    conv.buffer = ir;
+    room.gain.value = 0.1 + genome[7] * 0.016;
+    chainAll([dry, comp, master, limit, dest]);
+    chainAll([room, conv, biquad(ctx, 'lowpass', 5000, 0.5), comp]);
+    var drums = ctx.createGain(), roomSend = ctx.createGain();
+    roomSend.gain.value = 0.5;
+    drums.connect(dry); drums.connect(roomSend); roomSend.connect(room);
+    var bass = ctx.createGain(); bass.gain.value = 0.85; bass.connect(dry);
+    return { master: master, drums: drums, bass: bass, noise: noiseBuf(ctx, 1.2), drive: drive, heavy: heavy,
+      left: ampChannel(ctx, drive, heavy, -0.62, room, dry), right: ampChannel(ctx, drive, heavy, 0.62, room, dry) };
+  }
+  function kick(ctx, ch, t, v) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(50, t + 0.07);
+    env(g, t, v, 0.2); o.connect(g); g.connect(ch.drums); o.start(t); o.stop(t + 0.23);
+    noise(ctx, ch, t, 'highpass', 3000, v * 0.16, 0.012); // estalo do batedor
+  }
+  function noise(ctx, ch, t, type, f, peak, dur, q) {
+    var s = ctx.createBufferSource(), fl = biquad(ctx, type, f, q), g = ctx.createGain();
+    s.buffer = ch.noise; env(g, t, peak, dur);
+    s.connect(fl); fl.connect(g); g.connect(ch.drums);
+    s.start(t, Math.random() * 0.4, dur + 0.02);
+  }
+  function snare(ctx, ch, t, v) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(230, t); o.frequency.exponentialRampToValueAtTime(165, t + 0.06);
+    env(g, t, v * 0.5, 0.11); o.connect(g); g.connect(ch.drums); o.start(t); o.stop(t + 0.13);
+    noise(ctx, ch, t, 'bandpass', 3200, v * 0.8, 0.17, 0.5);
+  }
+  function guitarNote(ctx, ch, t, freq, d, muted, strum) {
+    [ch.left, ch.right].forEach(function (input, side) {
+      var p = pluck(ctx, freq, muted), s = ctx.createBufferSource(), g = ctx.createGain(), at = t + strum + side * 0.007;
+      s.buffer = p.buffer; s.playbackRate.value = p.rate * (side ? 1.0025 : 0.9985);
+      g.gain.setValueAtTime(1, at); g.gain.setValueAtTime(1, at + d); g.gain.linearRampToValueAtTime(0.0001, at + d + 0.03);
+      s.connect(g); g.connect(input); s.start(at); s.stop(at + d + 0.05);
+    });
+  }
+  function scheduleBars(ctx, ch, t0, sound, genome, bars) {
+    var bpm = sound[0], step = 60 / bpm / 4, kit = KITS[sound[1]] || KITS.rock, riff = RIFFS[sound[2]] || RIFFS.power;
+    var heavy = genome[2], drive = genome[0], palm = sound[2] === 'chug' || sound[2] === 'djent';
     var swing = sound[1] === 'shuffle' ? step * 0.33 : 0;
-    var buf = noiseBuf(ctx), root = 82.41 * Math.pow(2, -Math.round(heavy / 3) / 12);
-    var shaper = ctx.createWaveShaper(); shaper.curve = curve(drive); shaper.oversample = '2x';
-    var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500 + drive * 260;
-    var amp = ctx.createGain(); amp.gain.value = 0.17 + (10 - drive) * 0.022;
-    shaper.connect(lp); lp.connect(amp); amp.connect(out);
+    var root = 82.41 * Math.pow(2, -Math.round(heavy / 3) / 12);
     function at(n) { return t0 + n * step + (n % 2 ? swing : 0); }
     for (var b = 0; b < bars; b++) {
+      if (drive >= 4 && sound[1] !== 'soft') noise(ctx, ch, at(b * 16), 'highpass', 5500, 0.16, 0.8);
       for (var i = 0; i < 16; i++) {
-        var n = b * 16 + i, t = at(n);
-        if (kit[0][i] === 'x') kick(ctx, out, t);
-        if (kit[1][i] === 'x') hit(ctx, out, buf, t, 'bandpass', 1800, 0.55, 0.13);
-        if (kit[2][i] === 'x') hit(ctx, out, buf, t, 'highpass', 7000, 0.12, 0.035);
+        var n = b * 16 + i, t = at(n), hum = 0.92 + Math.random() * 0.12;
+        if (kit[0][i] === 'x') kick(ctx, ch, t, 0.95 * hum);
+        if (kit[1][i] === 'x') snare(ctx, ch, t, 0.72 * hum);
+        if (kit[2][i] === 'x') noise(ctx, ch, t, 'highpass', 8000, (i % 4 === 0 ? 0.13 : 0.08) * hum, 0.04);
       }
       riff.forEach(function (ev) {
-        var t = at(b * 16 + ev[0]), d = Math.max(step * ev[2] * 0.92, 0.05);
-        var v = (ev[3] ? [0, 7, 12] : [0]);
-        v.forEach(function (iv) {
-          var o = ctx.createOscillator(), g = ctx.createGain();
-          o.type = drive > 2 ? 'sawtooth' : 'triangle';
-          o.frequency.value = root * Math.pow(2, (ev[1] + iv) / 12) * (ev[3] ? 1 : 2);
-          g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(drive > 5 ? 0.2 : 0.01, t + d);
-          g.gain.linearRampToValueAtTime(0.0001, t + d + 0.02);
-          o.connect(g); g.connect(shaper); o.start(t); o.stop(t + d + 0.03);
+        var t = at(b * 16 + ev[0]), d = Math.max(step * ev[2] * 0.94, 0.05), chord = ev[3];
+        var muted = palm && !chord;
+        (chord ? [0, 7, 12] : [0]).forEach(function (iv, v) {
+          guitarNote(ctx, ch, t, root * Math.pow(2, (ev[1] + iv) / 12) * (chord ? 1 : 2), d, muted, v * 0.004);
         });
-        var bass = ctx.createOscillator(), bg = ctx.createGain();
-        bass.type = 'triangle'; bass.frequency.value = root / 2 * Math.pow(2, ev[1] / 12);
-        env(bg, t, 0.36, Math.max(d, 0.12)); bass.connect(bg); bg.connect(out); bass.start(t); bass.stop(t + d + 0.1);
+        var o = ctx.createOscillator(), lp = biquad(ctx, 'lowpass', 750, 0.8), g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.value = root / 2 * Math.pow(2, ev[1] / 12);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.42, t + 0.006);
+        g.gain.setValueAtTime(0.42, t + Math.max(d - 0.02, 0.01)); g.gain.linearRampToValueAtTime(0.0001, t + d + 0.02);
+        o.connect(lp); lp.connect(g); g.connect(ch.bass); o.start(t); o.stop(t + d + 0.03);
       });
     }
     return bars * 16 * step;
@@ -105,21 +171,25 @@
     var same = btn && player.btn === btn; stop(); if (same) return;
     var C = window.AudioContext || window.webkitAudioContext; if (!C) return;
     player.ctx = player.ctx || new C(); player.ctx.resume();
-    var ctx = player.ctx, master = ctx.createGain(), comp = ctx.createDynamicsCompressor();
-    master.gain.value = 0.55; master.connect(comp); comp.connect(ctx.destination); player.master = master;
+    var ctx = player.ctx, ch = makeChain(ctx, ctx.destination, genome), master = ch.master;
+    player.master = master;
     if (btn) { btn.dataset.label = btn.dataset.label || btn.textContent; btn.setAttribute('aria-pressed', 'true'); btn.textContent = '■ ' + T.stop; player.btn = btn; }
     var t = ctx.currentTime + 0.05, loops = 0;
     (function loop() {
       if (player.master !== master) return;
-      var d = scheduleBars(ctx, master, t, sound, genome, 2); t += d;
+      var d = scheduleBars(ctx, ch, t, sound, genome, 2); t += d;
       if (++loops >= 6) { player.timer = setTimeout(stop, (t - ctx.currentTime) * 1000); return; }
       player.timer = setTimeout(loop, Math.max(0, (t - ctx.currentTime - 0.3) * 1000));
     })();
   }
-  R.renderTest = function (id) { // usado para conferir que cada esboço produz som
-    var g = byId[id], O = window.OfflineAudioContext, c = new O(1, 44100 * 3, 44100);
-    scheduleBars(c, c.destination, 0, g.sound, g.genome, 1);
-    return c.startRendering().then(function (b) { var d = b.getChannelData(0), s = 0; for (var i = 0; i < d.length; i += 40) s += d[i] * d[i]; return Math.sqrt(s / (d.length / 40)); });
+  R.renderTest = function (id) { // usado para conferir nível, picos e silêncio de cada esboço
+    var g = byId[id], c = new window.OfflineAudioContext(2, 44100 * 5, 44100), ch = makeChain(c, c.destination, g.genome), t0 = performance.now();
+    scheduleBars(c, ch, 0, g.sound, g.genome, 2);
+    return c.startRendering().then(function (b) {
+      var l = b.getChannelData(0), r = b.getChannelData(1), sum = 0, peak = 0, side = 0, end = Math.min(l.length, Math.floor(44100 * 2 * 16 * 60 / g.sound[0] / 4));
+      for (var i = 0; i < end; i++) { sum += l[i] * l[i]; side += (l[i] - r[i]) * (l[i] - r[i]); peak = Math.max(peak, Math.abs(l[i]), Math.abs(r[i])); }
+      return { rms: Math.sqrt(sum / end), peak: peak, width: Math.sqrt(side / end), ms: Math.round(performance.now() - t0) };
+    });
   };
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-play]'); if (!b) return;
