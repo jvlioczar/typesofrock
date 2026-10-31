@@ -37,7 +37,7 @@ G("grunge", "Grunge", "Grunge", 1986, "alternativo", ["alternative-rock", "hardc
 G("math-rock", "Math Rock", "Math Rock", 1988, "alternativo", ["post-hardcore", "progressive-rock", "indie-rock"], ["post-rock", "post-hardcore", "djent"], [],
   "Chicago e Louisville, EUA", "Chicago and Louisville, USA",
   [4, 7, 3, 9, 5, 4, 1, 9], (144, "break", "arp"),
-  ["Don Caballero", "Slint", "Hella", "Polvo", "King Crimson", "Battles", "Toe", "Elephant Gym", "Polyphia", "Chon", "Chinese Football", "TTNG", "Austin TV", "Angine de Poitrine", "Shellac", "American Football", "Minus the Bear", "Tera Melos", "Bitch Magnet", "Chavez"],
+  ["Don Caballero", "Slint", "Hella", "Polvo", "King Crimson", "Yes", "Rush", "Battles", "Toe", "Elephant Gym", "Polyphia", "Chon", "Chinese Football", "TTNG", "Austin TV", "Angine de Poitrine", "Shellac", "American Football", "Minus the Bear", "Tera Melos", "Bitch Magnet", "Chavez"],
   ["Em porões de cidades americanas, músicos com origem no hardcore queriam a complexidade do progressivo e King Crimson, sem a fantasia nem o figurino. Slint e Don Caballero marcaram a cena, depois repercutida também no Japão.",
    "Compassos irregulares, guitarras limpas em tapping, padrões rítmicos que mudam sem aviso, muitas faixas instrumentais.",
    "É progressivo em tamanho de bolso: a complexidade rítmica permanece, mas o épico some. A precisão é desconfortável e o clima é mais seco e menor."],
