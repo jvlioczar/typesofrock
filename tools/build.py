@@ -8,6 +8,7 @@ sys.path.insert(0, HERE)
 import genres_1, genres_2, genres_3, genres_4
 from genres_3 import EXT, CLADES
 from content import CONCEPTS, TIERS, DECADES, UI, PRIVACY
+from bands_extra import EXTRA
 
 SITE = "https://typesofrock.biblioverse.org"
 LISTS = json.load(open(os.path.join(HERE, "lists.json"), encoding="utf8"))
@@ -362,8 +363,15 @@ def page_bands(pg):
     t, L = pg.t, pg.lang
     table = {akey(r[0]): r for r in LISTS["table"]}
     rows, count = "", 0
+    seen = set(akey(FIX.get(n, n)) for k in "SABC" for n in LISTS["tiers"][k])
+    extra = {k: [] for k in "SABC"}
+    for k, names in EXTRA.items():
+        for n in names:
+            if akey(n) not in seen:
+                seen.add(akey(n))
+                extra[k].append(n)
     for k in "SABC":
-        for name in LISTS["tiers"][k]:
+        for name in LISTS["tiers"][k] + extra[k]:
             name = FIX.get(name, name)
             r = table.get(akey(name), [name, "", "", ""])
             genres = artist_genres(name)[:3]
