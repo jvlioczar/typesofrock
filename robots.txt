@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://typesofrock.biblioverse.org/sitemap.xml
