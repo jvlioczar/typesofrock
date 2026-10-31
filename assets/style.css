@@ -4,7 +4,7 @@
   --paper: #fffdf7; --paper-ink: #17161a; --paper-ink2: #5c5a60; --paper-line: #dcd0ba;
   --accent: #c93a12;
   --display: "Germania One", Georgia, serif;
-  --body: "Instrument Sans", system-ui, sans-serif;
+  --body: "Google Sans", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
   color-scheme: light;
 }
