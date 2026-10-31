@@ -214,7 +214,7 @@ def page_home(pg):
     legend = "".join(f'<button type="button" data-clade="{c}" aria-pressed="false"><i class="swatch" style="background:{CLADES[c][2]}"></i>{e(CLADES[c][0 if L == "pt" else 1])}</button>' for c in CLADE_IDS)
     doors = "".join(f'<a class="door" href="{pg.p[k]}"><span class="mono">{e(m)}</span><h3>{e(h.format(n=len(GENRES)))}</h3><p>{e(d)}</p></a>' for k, m, h, d in t["doors"])
     clades = "".join(
-        f'<div class="door" style="border-left:3px solid {CLADES[c][2]}"><span class="mono">{sum(1 for g in GENRES if g["clade"] == c)} {e(t["spp"])}</span><h3>{e(CLADES[c][0 if L == "pt" else 1])}</h3><p>{e(CLADES[c][3 if L == "pt" else 4])}</p></div>'
+        f'<div class="door"><span class="mono" style="display:flex;align-items:center;gap:8px"><i class="swatch" style="background:{CLADES[c][2]}"></i>{sum(1 for g in GENRES if g["clade"] == c)} {e(t["spp"])}</span><h3>{e(CLADES[c][0 if L == "pt" else 1])}</h3><p>{e(CLADES[c][3 if L == "pt" else 4])}</p></div>'
         for c in CLADE_IDS)
     body = f"""<section class="stage" aria-label="{e(t['treeLabel'])}">
 <svg id="tree" role="group" aria-label="{e(t['treeLabel'])}"></svg>
