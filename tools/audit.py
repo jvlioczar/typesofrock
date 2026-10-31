@@ -19,9 +19,9 @@ for d, _, fs in os.walk(ROOT):
             t = os.path.normpath(os.path.join(d, h))
             if not os.path.exists(t):
                 print("LINK", os.path.relpath(p, ROOT), h); bad += 1
-        if os.path.relpath(p, ROOT).startswith("en"):
+        if not os.path.relpath(p, ROOT).startswith("pt") and f != "404.html":
             body = re.sub(r'<a class="lang".*?</a>', "", s.split("<main", 1)[1]) if "<main" in s else ""
             m = PT.search(re.sub(r"<[^>]+>", " ", s.split("<body", 1)[1]))
             if m:
-                print("PT EM /en/", os.path.relpath(p, ROOT), m.group(0)); bad += 1
+                print("PT NA VERSAO EN", os.path.relpath(p, ROOT), m.group(0)); bad += 1
 print("problemas:", bad)

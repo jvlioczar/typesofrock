@@ -47,7 +47,7 @@ icon(180).save(os.path.join(ROOT, "apple-touch-icon.png"))
 icon(192).save(os.path.join(ROOT, "icon-192.png"))
 icon(512).save(os.path.join(ROOT, "icon-512.png"))
 icon(32).save(os.path.join(ROOT, "favicon.ico"), sizes=[(32, 32)])
-json.dump({"name": "Tipos de Rock", "short_name": "Tipos de Rock", "start_url": "/", "display": "standalone", "background_color": "#f6f0e4", "theme_color": "#f6f0e4",
+json.dump({"name": "Types of Rock", "short_name": "Types of Rock", "start_url": "/", "display": "standalone", "background_color": "#f6f0e4", "theme_color": "#f6f0e4",
            "icons": [{"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}]},
           open(os.path.join(ROOT, "site.webmanifest"), "w"), ensure_ascii=False)
 

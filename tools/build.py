@@ -1,4 +1,4 @@
-"""Gera todo o site: PT na raiz, EN em /en/. Rode: python tools/build.py"""
+"""Gera todo o site: EN na raiz, PT em /pt/. Rode: python tools/build.py"""
 import json, os, re, shutil, sys, html
 from urllib.parse import quote_plus
 
@@ -116,12 +116,12 @@ class Page:
 
     def write(self, rel, other, depth, title, desc, body, cur="", og_alt=None):
         lang, t, p = self.lang, self.t, self.p
-        prefix = "" if lang == "pt" else "en/"
+        prefix = "" if lang == "en" else "pt/"
         canonical = f"{SITE}/{prefix}{rel}".replace("index.html", "")
-        other_url = f"{SITE}/{'en/' if lang == 'pt' else ''}{other}".replace("index.html", "")
+        other_url = f"{SITE}/{'pt/' if lang == 'en' else ''}{other}".replace("index.html", "")
         pt_url, en_url = (canonical, other_url) if lang == "pt" else (other_url, canonical)
-        assets = "../" * (depth + (1 if lang == "en" else 0))
-        other_href = ("../" * depth + "en/" + other) if lang == "pt" else ("../" * (depth + 1) + other)
+        assets = "../" * (depth + (1 if lang == "pt" else 0))
+        other_href = ("../" * depth + "pt/" + other) if lang == "en" else ("../" * (depth + 1) + other)
         nav = "".join(f'<a href="{self.href(depth, p[k])}"{" aria-current=page" if cur == k else ""}>{e(t["nav"][k])}</a>' for k in ["home", "genres", "evo", "lab", "songs", "bands", "about"])
         og = f"{SITE}/og-image{'-en' if lang == 'en' else ''}.png"
         ld = json.dumps({"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": desc, "url": canonical, "inLanguage": t["locale"].replace("_", "-"),
@@ -139,7 +139,7 @@ class Page:
 <link rel="canonical" href="{canonical}">
 <link rel="alternate" hreflang="pt-BR" href="{pt_url}">
 <link rel="alternate" hreflang="en" href="{en_url}">
-<link rel="alternate" hreflang="x-default" href="{pt_url}">
+<link rel="alternate" hreflang="x-default" href="{en_url}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{e(t['site'])}">
 <meta property="og:locale" content="{t['locale']}">
@@ -407,9 +407,12 @@ def data_js(lang):
 
 
 def main():
-    for d in ["generos", "en"]:
+    for d in ["generos", "genres", "en", "pt"]:
         shutil.rmtree(os.path.join(ROOT, d), ignore_errors=True)
-    for lang in ("pt", "en"):
+    for f in os.listdir(ROOT):
+        if f.endswith(".html"):
+            os.remove(os.path.join(ROOT, f))
+    for lang in ("en", "pt"):
         pg = Page(lang)
         data_js(lang)
         page_home(pg); page_genres(pg); page_evo(pg); page_lab(pg); page_songs(pg); page_bands(pg); page_about(pg)
