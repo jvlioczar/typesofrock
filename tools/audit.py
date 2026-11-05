@@ -12,6 +12,8 @@ for d, _, fs in os.walk(ROOT):
             continue
         p = os.path.join(d, f)
         s = open(p, encoding="utf8").read()
+        if 'http-equiv="refresh"' in s:
+            continue
         if f != "404.html":
             for tag, rx in [("title", r"<title>(.*?)</title>"), ("description", r'<meta name="description" content="([^"]*)"')]:
                 m = re.search(rx, s)

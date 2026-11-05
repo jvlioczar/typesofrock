@@ -204,8 +204,7 @@ class Page:
 </head>
 <body>
 <nav id="bvbar" class="bvbar" data-current="typesofrock" aria-label="BiblioVerse" style="position:fixed;top:0;left:0;right:0;height:44px;z-index:9000;background:linear-gradient(90deg,#4f7cff,#7a5cff)"><a href="https://biblioverse.org" style="color:#fff;line-height:44px;padding:0 14px;font-weight:700;text-decoration:none">BiblioVerse</a></nav>
-<a class="skip" href="#main">{e(t['skip'])}</a>
-<header class="top"><div class="wrap">
+<header class="top"><a class="skip" href="#main">{e(t['skip'])}</a><div class="wrap">
 <a class="logo" href="{self.href(depth, p['home'])}">{LOGO}{e(t['site'])}</a>
 <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="siteNav" aria-label="{e(t['menu'])}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
 <nav class="nav" id="siteNav" aria-label="{e(t['menu'])}">{nav}<a class="lang" href="{other_href}" hreflang="{'en' if lang == 'pt' else 'pt-BR'}" lang="{'en' if lang == 'pt' else 'pt-BR'}">{t['switch']}</a></nav>
@@ -214,7 +213,7 @@ class Page:
 {body}
 </main>
 {t.get('promo', '')}
-<footer><div class="wrap"><span>{e(t['footer'])}</span><span><a href="{self.href(depth, p['about'])}">{e(t['nav']['about'])}</a> · <a href="{self.href(depth, p['about'])}#privacy">{e(PRIVACY[lang]['h'])}</a> · <a href="https://biblioverse.org">BiblioVerse</a></span></div></footer>
+<footer><div class="wrap"><span>© {BUILT[:4]} BiblioVerse · {e(t['footer'])}</span><span><a href="{self.href(depth, p['about'])}">{e(t['nav']['about'])}</a> · <a href="{self.href(depth, p['about'])}#privacy">{e(PRIVACY[lang]['h'])}</a> · <a href="https://biblioverse.org">BiblioVerse</a></span></div></footer>
 <script src="{assets}assets/data-{lang}.js"></script>
 <script src="{assets}assets/rock.js"></script>
 </body>
@@ -280,7 +279,7 @@ def page_genres(pg):
         n = g["name"][L]
         c = CLADES[g["clade"]]
         search = e((n + " " + " ".join(g["artists"])).lower())
-        cards += f'<a class="card" style="--c:{c[2]}" href="{pg.p["dir"]}/{g["id"]}.html" data-clade="{g["clade"]}" data-kind="{g["kind"]}" data-name="{e(n)}" data-year="{g["year"]}" data-kids="{len(g["children"])}" data-search="{search}">{radar(g["genome"], c[2], 100)}<div><h3>{e(n)}</h3><div class="mono">{g["year"]} · {e(t["kinds"][g["kind"]].split(" /")[0])}</div></div></a>'
+        cards += f'<a class="card" style="--c:{c[2]}" href="{pg.p["dir"]}/{g["id"]}.html" data-clade="{g["clade"]}" data-kind="{g["kind"]}" data-name="{e(n)}" data-year="{g["year"]}" data-kids="{len(g["children"])}" data-search="{search}">{radar(g["genome"], c[2], 100)}<div><h2>{e(n)}</h2><div class="mono">{g["year"]} · {e(t["kinds"][g["kind"]].split(" /")[0])}</div></div></a>'
     tabs = f'<button aria-pressed="true" data-clade="all">{e(t["all"])}</button>' + "".join(f'<button aria-pressed="false" data-clade="{c}">{e(CLADES[c][0 if L == "pt" else 1])}</button>' for c in CLADE_IDS)
     body = f"""<div class="wrap"><div class="page-head"><span class="mono">{len(GENRES)} {e(t['spp'])}</span><h1>{e(t['genresH'])}</h1><p class="lead">{e(t['genresP'])}</p></div>
 <div class="tabs" id="cladeTabs">{tabs}</div>
@@ -375,7 +374,7 @@ def page_evo(pg):
 def page_lab(pg):
     t, L = pg.t, pg.lang
     opts = lambda sel: "".join(f'<option value="{g["id"]}"{" selected" if g["id"] == sel else ""}>{e(g["name"][L])} ({g["year"]})</option>' for g in sorted(GENRES, key=lambda g: g["name"][L]))
-    sliders = "".join(f'<label class="slider"><span>{e(n)}</span><input type="range" min="0" max="10" value="{v}" aria-label="{e(n)}"><output>{v}</output></label>' for n, v in zip(t["traits"], [8, 6, 7, 5, 7, 4, 5, 5]))
+    sliders = "".join(f'<div class="slider"><label for="tr{i}">{e(n)}</label><input id="tr{i}" type="range" min="0" max="10" value="{v}"><output for="tr{i}">{v}</output></div>' for i, (n, v) in enumerate(zip(t["traits"], [8, 6, 7, 5, 7, 4, 5, 5])))
     body = f"""<div class="wrap"><div class="page-head"><span class="mono">{e(t['labTag'])}</span><h1>{e(t['labH'])}</h1><p class="lead">{e(t['labP'])}</p></div>
 <section style="margin-bottom:60px"><h2 style="font-size:2.2rem;margin-bottom:14px">{e(t['cmpH'])}</h2>
 <div class="pick2"><select id="gA" aria-label="A">{opts('blues')}</select><button class="btn" id="swap" type="button" aria-label="{e(t['swap'])}">⇄</button><select id="gB" aria-label="B">{opts('djent')}</select><button class="btn" id="rand" type="button">{e(t['random'])}</button></div>
@@ -423,7 +422,7 @@ def page_bands(pg):
             gl = '<div class="chips">' + "".join(f'<a href="{pg.p["dir"]}/{i}.html">{e(BY[i]["name"][L])}</a>' for i in genres) + "</div>" if genres else ""
             rows += (f'<tr data-tier="{k}" data-name="{e(name.lower())}" data-t="{"SABC".index(k) + 1}" data-imp="{r[1]}" data-pop="{r[2]}" data-avg="{r[3]}">'
                      f'<td><span class="tb {k}">{k}</span></td><td><a href="{yt(name)}" target="_blank" rel="noopener">{e(name)}</a></td><td class="n">{r[1] or "–"}</td><td class="n">{r[2] or "–"}</td><td class="n">{r[3] or "–"}</td><td>{gl}</td></tr>')
-    tiers = "".join(f'<div class="door"><span class="tb {k}">{k}</span><h3>{e(TIERS[k][L][0])}</h3><p>{e(TIERS[k][L][1])}</p></div>' for k in "SABC")
+    tiers = "".join(f'<div class="door"><span class="tb {k}">{k}</span><h2>{e(TIERS[k][L][0])}</h2><p>{e(TIERS[k][L][1])}</p></div>' for k in "SABC")
     tabs = f'<button aria-pressed="true" data-tier="all">{e(t["all"])}</button>' + "".join(f'<button aria-pressed="false" data-tier="{k}">{k} · {e(TIERS[k][L][0])}</button>' for k in "SABC")
     th = lambda k, label, cl="": f'<th class="{cl}"><button data-k="{k}" type="button">{e(label)}</button></th>'
     body = f"""<div class="wrap"><div class="page-head"><span class="mono">{count} {e(t['bandsN'])}</span><h1>{e(t['bandsH'])}</h1><p class="lead">{e(t['bandsP'])}</p></div>
@@ -462,6 +461,30 @@ def data_js(lang):
         f.write(js)
 
 
+def stub(rel, target):
+    """Página de redirecionamento para um endereço antigo: fora do sitemap e sem indexação."""
+    url = f"{SITE}/{target}".replace("index.html", "")
+    path = os.path.join(ROOT, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf8", newline="\n") as f:
+        f.write(f'''<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Types of Rock</title><meta name="robots" content="noindex, follow"><link rel="canonical" href="{url}"><meta http-equiv="refresh" content="0; url={url}"><script>location.replace({json.dumps(url)} + location.hash);</script></head>
+<body><p><a href="{url}">{url}</a></p></body></html>
+''')
+
+
+def redirects():
+    """Endereços usados antes da troca de idiomas: PT ficava na raiz e EN em /en/."""
+    pt, en = PATHS["pt"], PATHS["en"]
+    for k in ("genres", "evo", "lab", "songs", "bands", "about"):
+        stub(pt[k], "pt/" + pt[k])
+        stub(f"en/{en[k]}", en[k])
+    stub("en/index.html", "index.html")
+    for g in GENRES:
+        stub(f"{pt['dir']}/{g['id']}.html", f"pt/{pt['dir']}/{g['id']}.html")
+        stub(f"en/{en['dir']}/{g['id']}.html", f"{en['dir']}/{g['id']}.html")
+
+
 def main():
     for d in ["generos", "genres", "en", "pt"]:
         shutil.rmtree(os.path.join(ROOT, d), ignore_errors=True)
@@ -474,6 +497,7 @@ def main():
         page_home(pg); page_genres(pg); page_evo(pg); page_lab(pg); page_songs(pg); page_bands(pg); page_about(pg)
         for i, g in enumerate(ORDER):
             page_genre(pg, g, i)
+    redirects()
     # 404, sitemap, robots
     notfound = open(os.path.join(HERE, "404.tpl"), encoding="utf8").read()
     open(os.path.join(ROOT, "404.html"), "w", encoding="utf8", newline="\n").write(notfound)
