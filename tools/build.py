@@ -9,6 +9,7 @@ import genres_1, genres_2, genres_3, genres_4
 from genres_3 import EXT, CLADES
 from content import CONCEPTS, TIERS, DECADES, UI, PRIVACY
 from bands_extra import EXTRA, BRAZIL_PT
+from kinds import kind, GENRE, FUSION
 
 SITE = "https://typesofrock.biblioverse.org"
 LISTS = json.load(open(os.path.join(HERE, "lists.json"), encoding="utf8"))
@@ -34,6 +35,28 @@ for g in GENRES:
     else:
         g["artists"], g["top"] = g["names"], min(10, len(g["names"]))
     assert len(set(a.lower() for a in g["artists"])) == len(g["artists"]), (g["id"], [a for a in g["artists"] if g["artists"].count(a) > 1])
+for x in GENRE | FUSION:
+    assert x in BY, x
+for g in GENRES:
+    g["kind"] = kind(g["id"])
+
+
+def kind_line(g, L):
+    """Rótulo completo: 'Subgênero de X' ou 'Fusão de A, B e C'."""
+    t = UI[L]
+    names = lambda ids: [BY[i]["name"][L] for i in ids]
+    if g["kind"] == "genre":
+        return t["kindRoot"] if g["clade"] == "raizes" else t["kinds"]["genre"]
+    if g["kind"] == "sub":
+        up = BY[g["parents"][0]]
+        while up["kind"] != "genre" and up["parents"]:
+            up = BY[up["parents"][0]]
+        return t["subOf"].format(p=up["name"][L])
+    src = names(g["parents"][:3]) + [EXT[x][0 if L == "pt" else 1] for x in g["ext"]][:2]
+    src = src[:4]
+    return t["fusionOf"].format(p=(", ".join(src[:-1]) + t["and"] + src[-1]) if len(src) > 1 else src[0])
+
+
 ORDER = sorted(GENRES, key=lambda g: (g["year"], g["name"]["pt"]))
 CLADE_IDS = list(CLADES)
 
@@ -257,11 +280,11 @@ def page_genres(pg):
         n = g["name"][L]
         c = CLADES[g["clade"]]
         search = e((n + " " + " ".join(g["artists"])).lower())
-        cards += f'<a class="card" style="--c:{c[2]}" href="{pg.p["dir"]}/{g["id"]}.html" data-clade="{g["clade"]}" data-name="{e(n)}" data-year="{g["year"]}" data-kids="{len(g["children"])}" data-search="{search}">{radar(g["genome"], c[2], 100)}<div><h3>{e(n)}</h3><div class="mono">{g["year"]} · {e(c[0 if L == "pt" else 1])}</div></div></a>'
+        cards += f'<a class="card" style="--c:{c[2]}" href="{pg.p["dir"]}/{g["id"]}.html" data-clade="{g["clade"]}" data-kind="{g["kind"]}" data-name="{e(n)}" data-year="{g["year"]}" data-kids="{len(g["children"])}" data-search="{search}">{radar(g["genome"], c[2], 100)}<div><h3>{e(n)}</h3><div class="mono">{g["year"]} · {e(t["kinds"][g["kind"]].split(" /")[0])}</div></div></a>'
     tabs = f'<button aria-pressed="true" data-clade="all">{e(t["all"])}</button>' + "".join(f'<button aria-pressed="false" data-clade="{c}">{e(CLADES[c][0 if L == "pt" else 1])}</button>' for c in CLADE_IDS)
     body = f"""<div class="wrap"><div class="page-head"><span class="mono">{len(GENRES)} {e(t['spp'])}</span><h1>{e(t['genresH'])}</h1><p class="lead">{e(t['genresP'])}</p></div>
 <div class="tabs" id="cladeTabs">{tabs}</div>
-<div class="filters"><input id="q" type="search" placeholder="{e(t['genreSearch'])}" aria-label="{e(t['genreSearch'])}"><select id="sort" aria-label="{e(t['sortBy'])}"><option value="year">{e(t['sortYear'])}</option><option value="name">{e(t['sortName'])}</option><option value="kids">{e(t['sortKids'])}</option></select><span class="mono"><span id="qcount"></span> {e(t['spp'])}</span></div>
+<div class="filters"><input id="q" type="search" placeholder="{e(t['genreSearch'])}" aria-label="{e(t['genreSearch'])}"><select id="kind" aria-label="{e(t['kindLabel'])}"><option value="all">{e(t['allKinds'])}</option>{"".join(f'<option value="{k}">{e(t["kindsPl"][k])} ({sum(1 for g in GENRES if g["kind"] == k)})</option>' for k in ("genre", "sub", "fusion"))}</select><select id="sort" aria-label="{e(t['sortBy'])}"><option value="year">{e(t['sortYear'])}</option><option value="name">{e(t['sortName'])}</option><option value="kids">{e(t['sortKids'])}</option></select><span class="mono"><span id="qcount"></span> {e(t['spp'])}</span></div>
 <div class="cards" id="cards">{cards}</div><div style="height:60px"></div></div>"""
     other = PATHS["en" if L == "pt" else "pt"]["genres"]
     pg.write(pg.p["genres"], other, 0, t["genresH"], t["genresDesc"].format(n=len(GENRES)), body, "genres", kind="CollectionPage")
@@ -303,7 +326,8 @@ def page_genre(pg, g, i):
     body = f"""<div class="spec-head" style="--c:{c[2]}"><div class="wrap">
 <a class="mono" href="../{pg.p['genres']}">← {e(t['nav']['genres'])}</a>
 <h1>{e(n)}</h1>
-<div class="facts"><span>{e(t['born'])} <b>{g['year']}</b></span><span>{e(t['habitat'])} <b>{e(g['place'][L])}</b></span><span>{e(t['clade'])} <b>{e(c[0 if L == 'pt' else 1])}</b></span></div>
+<div class="kind-tag {g['kind']}">{e(kind_line(g, L))}</div>
+<div class="facts"><span>{e(t['kindLabel'])} <b>{e(t['kinds'][g['kind']])}</b></span><span>{e(t['born'])} <b>{g['year']}</b></span><span>{e(t['habitat'])} <b>{e(g['place'][L])}</b></span><span>{e(t['clade'])} <b>{e(c[0 if L == 'pt' else 1])}</b></span></div>
 <div class="crumbs">{crumbs}</div></div></div>
 <div class="wrap"><div class="spec"><div>
 <div class="trait"><span class="mono">{e(t['ctxTag'])}</span><h2>{e(t['ctx'])}</h2><p>{e(tx[0])}</p></div>
@@ -414,6 +438,7 @@ def page_bands(pg):
 def page_about(pg):
     t, L = pg.t, pg.lang
     secs = "".join(f"<h2>{e(h)}</h2><p>{e(p)}</p>" for h, p in t["about"])
+    secs += f"<h2>{e(t['kindsH'])}</h2><p>{e(t['kindsP'])}</p><ul>" + "".join(f"<li><b>{e(t['kinds'][k])}</b>: {e(t['kindsDef'][k])}</li>" for k in ("genre", "sub", "fusion")) + "</ul>"
     pv = PRIVACY[L]
     secs += f'<section id="privacy" class="privacy"><h2>{e(pv["h"])}</h2><p class="lead">{e(pv["lead"])}</p>'
     secs += "".join(f"<h3>{e(h)}</h3><p>{e(p)}</p>" for h, p in pv["items"])
@@ -428,7 +453,7 @@ def data_js(lang):
         dir=PATHS[lang]["dir"], t=t["js"],
         clades=[dict(id=c) for c in CLADE_IDS], cladeColor={c: CLADES[c][2] for c in CLADE_IDS},
         genres=[dict(id=g["id"], name=g["name"][lang], short=SHORT.get(g["id"], g["name"][lang]), year=g["year"], clade=g["clade"], parents=g["parents"], children=g["children"],
-                     place=g["place"][lang], blurb=g["text"][lang][1], genome=g["genome"], sound=g["sound"], artists=g["artists"]) for g in GENRES])
+                     place=g["place"][lang], kind=t["kinds"][g["kind"]], kindLine=kind_line(g, lang), blurb=g["text"][lang][1], genome=g["genome"], sound=g["sound"], artists=g["artists"]) for g in GENRES])
     payload["t"]["traits"] = t["traits"]
     payload["t"]["genome"] = t["genome"]
     js = "window.ROCK=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n"

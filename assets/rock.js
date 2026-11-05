@@ -314,7 +314,7 @@
       selected = id; light(id); stopClock();
       var g = byId[id];
       if (+range.value < g.year) setYear(2026);
-      panel.innerHTML = '<button class="x" aria-label="' + T.close + '">×</button><div class="mono">' + g.year + ' · ' + esc(g.place) + '</div><h2>' + esc(g.name) + '</h2>' +
+      panel.innerHTML = '<button class="x" aria-label="' + T.close + '">×</button><div class="mono">' + g.year + ' · ' + esc(g.place) + '</div><h2>' + esc(g.name) + '</h2><div class="kind-tag">' + esc(g.kindLine) + '</div>' +
         '<p>' + esc(g.blurb) + '</p><h3>' + T.parents + '</h3>' + chips(g.parents) + '<h3>' + T.children + '</h3>' + chips(g.children) +
         '<h3>' + T.greats + '</h3><p>' + g.artists.slice(0, 6).map(esc).join(', ') + '</p>' +
         '<div class="panel-acts"><a class="btn" href="' + url(id) + '">' + T.open + ' →</a><button class="btn ghost" data-play="' + id + '">▶ ' + T.listen + '</button></div>';
@@ -400,10 +400,10 @@
   /* ---------- Índice de gêneros ---------- */
   function initIndex() {
     var box = $('#cards'); if (!box) return;
-    var q = $('#q'), sort = $('#sort'), clade = 'all', cards = $$('.card', box);
+    var q = $('#q'), sort = $('#sort'), kindSel = $('#kind'), clade = 'all', cards = $$('.card', box);
     function run() {
       var v = q.value.trim().toLowerCase();
-      cards.forEach(function (c) { c.hidden = !((clade === 'all' || c.dataset.clade === clade) && c.dataset.search.indexOf(v) >= 0); });
+      cards.forEach(function (c) { c.hidden = !((clade === 'all' || c.dataset.clade === clade) && (kindSel.value === 'all' || c.dataset.kind === kindSel.value) && c.dataset.search.indexOf(v) >= 0); });
       var key = sort.value;
       cards.slice().sort(function (a, b) {
         if (key === 'name') return a.dataset.name.localeCompare(b.dataset.name);
@@ -412,7 +412,7 @@
       }).forEach(function (c) { box.appendChild(c); });
       $('#qcount').textContent = cards.filter(function (c) { return !c.hidden; }).length;
     }
-    q.addEventListener('input', run); sort.addEventListener('change', run);
+    q.addEventListener('input', run); sort.addEventListener('change', run); kindSel.addEventListener('change', run);
     $$('#cladeTabs button').forEach(function (b) {
       b.addEventListener('click', function () {
         clade = b.dataset.clade;

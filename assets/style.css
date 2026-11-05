@@ -134,6 +134,9 @@ a.door:hover { background: var(--bg3); }
 
 /* Ficha do gênero */
 .spec-head { background: linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, var(--bg)), var(--bg) 62%); padding: 42px 0 36px; border-bottom: 1px solid var(--line); }
+.kind-tag { display: inline-block; font: 600 .72rem/1.4 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 4px 9px; border-radius: 4px; background: var(--ink); color: var(--bg); margin: 0 0 4px; }
+.panel .kind-tag { margin: 0 0 10px; }
+.spec-head .kind-tag { margin-top: 12px; }
 .spec-head h1 { font-size: clamp(2.1rem, 6.6vw, 5rem); margin: 10px 0 14px; }
 .facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-bottom: 18px; color: var(--ink2); }
 .facts b { color: var(--ink); font-weight: 600; }

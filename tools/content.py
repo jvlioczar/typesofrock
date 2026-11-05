@@ -112,7 +112,14 @@ TRAITS_EN = ["Distortion", "Speed", "Weight", "Virtuosity", "Melody", "Darkness"
 
 UI = {
     "pt": dict(
-        html="pt-BR", locale="pt_BR", promo=PROMO, site="Tipos de Rock", switch="EN", skip="Pular para o conteúdo", menu="Navegação", none="Nenhum nesta árvore",
+        html="pt-BR", locale="pt_BR", promo=PROMO,
+        kinds=dict(genre="Gênero", sub="Subgênero", fusion="Crossover / fusão"), kindsPl=dict(genre="Gêneros", sub="Subgêneros", fusion="Crossovers / fusões"),
+        kindLabel="Tipo", allKinds="Todos os tipos", kindRoot="Gênero de raiz, anterior ao rock", subOf="Subgênero de {p}", fusionOf="Crossover / fusão de {p}", **{"and": " e "},
+        kindsH="Gênero, subgênero ou fusão", kindsP="Cada ficha diz que tipo de ramo o gênero é. A classificação é editorial: os limites entre os três são discutidos, e a mesma música pode ser descrita de mais de um jeito.",
+        kindsDef=dict(genre="um estilo amplo, com subgêneros próprios, como Hard Rock e Punk Rock. As raízes anteriores ao rock, como o Blues, também entram aqui.",
+                      sub="um ramo dentro de uma linhagem que já existia, como o Thrash Metal dentro do Heavy Metal.",
+                      fusion="um gênero cruzado, nascido do encontro de duas linhagens distantes: o rock com outro gênero, como no Rap Rock, ou dois ramos separados do rock, como no Metalcore."),
+        site="Tipos de Rock", switch="EN", skip="Pular para o conteúdo", menu="Navegação", none="Nenhum nesta árvore",
         footer="A árvore evolutiva do rock. Um projeto BiblioVerse.",
         nav=dict(home="A Árvore", genres="Gêneros", evo="Evolução", lab="Laboratório", songs="Músicas", bands="Bandas", about="Sobre"),
         traits=TRAITS_PT, genome="Genoma sonoro", spp="espécies",
@@ -165,7 +172,14 @@ UI = {
                 steps="passos na árvore", simil="similaridade sonora", route="Caminho evolutivo", mrca="Ancestrais em comum", noMrca="Nenhum ancestral em comum: são duas raízes.", shared="Artistas nas duas listas", noShared="Nenhum artista em comum.", nearest="Sua espécie é", then="Parentes mais próximos do seu som"),
     ),
     "en": dict(
-        html="en", locale="en_US", site="Types of Rock", switch="PT", skip="Skip to content", menu="Navigation", none="None on this tree",
+        html="en", locale="en_US",
+        kinds=dict(genre="Genre", sub="Subgenre", fusion="Crossover / fusion"), kindsPl=dict(genre="Genres", sub="Subgenres", fusion="Crossovers / fusions"),
+        kindLabel="Type", allKinds="All types", kindRoot="Root genre, older than rock", subOf="Subgenre of {p}", fusionOf="Crossover / fusion of {p}", **{"and": " and "},
+        kindsH="Genre, subgenre or fusion", kindsP="Each sheet says what kind of branch the genre is. The classification is editorial: the borders between the three are debated, and the same music can be described in more than one way.",
+        kindsDef=dict(genre="a broad style with subgenres of its own, such as Hard Rock and Punk Rock. The roots older than rock, such as Blues, also count here.",
+                      sub="a branch within a lineage that already existed, such as Thrash Metal within Heavy Metal.",
+                      fusion="a crossover genre born where two distant lineages meet: rock and another genre, as in Rap Rock, or two separate branches of rock, as in Metalcore."),
+        site="Types of Rock", switch="PT", skip="Skip to content", menu="Navigation", none="None on this tree",
         footer="The evolutionary tree of rock. A BiblioVerse project.",
         nav=dict(home="The Tree", genres="Genres", evo="Evolution", lab="Lab", songs="Songs", bands="Bands", about="About"),
         traits=TRAITS_EN, genome="Sonic genome", spp="species",

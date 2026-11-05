@@ -239,7 +239,7 @@ G("ska-punk", "Ska Punk", "Ska Punk", 1985, "ruptura", ["punk-rock"], ["pop-punk
    "Off-beat guitar, punchy horns, bouncing bass, alternating with fast punk sections.",
    "A direct example of hybridization from outside the tree. It differs from pop-punk through horns and Jamaican syncopation."]),
 
-G("progressive-metal", "Metal Progressivo", "Progressive Metal", 1985, "peso", ["progressive-rock", "heavy-metal"], ["power-metal", "djent", "progressive-rock"], [],
+G("progressive-metal", "Metal Progressivo", "Progressive Metal", 1985, "peso", ["heavy-metal", "progressive-rock"], ["power-metal", "djent", "progressive-rock"], [],
   "EUA", "USA",
   [8, 7, 8, 10, 6, 6, 7, 9], (130, "gallop", "arp"),
   ["Dream Theater", "Queensrÿche", "Fates Warning", "Tool", "Opeth", "Symphony X", "Mastodon", "Between the Buried and Me", "Porcupine Tree", "Gojira", "Devin Townsend", "Haken", "Meshuggah", "Pain of Salvation"],
